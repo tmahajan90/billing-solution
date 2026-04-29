@@ -1,8 +1,46 @@
 const { app, BrowserWindow, dialog } = require("electron");
 const path = require("path");
+const http = require("http");
+const fs = require("fs");
 const { autoUpdater } = require("electron-updater");
 
 let mainWindow;
+let server;
+
+const MIME_TYPES = {
+  ".html": "text/html",
+  ".js": "application/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
+};
+
+function startLocalServer() {
+  const distPath = path.join(__dirname, "..", "dist");
+
+  server = http.createServer((req, res) => {
+    let filePath = path.join(distPath, req.url === "/" ? "index.html" : req.url);
+    const ext = path.extname(filePath);
+    res.setHeader("Content-Type", MIME_TYPES[ext] || "application/octet-stream");
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end("Not found");
+      } else {
+        res.writeHead(200);
+        res.end(data);
+      }
+    });
+  });
+
+  server.listen(0, "127.0.0.1");
+  return server.address().port;
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,11 +57,12 @@ function createWindow() {
     },
   });
 
-  const startUrl = app.isPackaged
-    ? `file://${path.sep}${path.join(__dirname, "..", "dist", "index.html")}`
-    : "http://localhost:5173";
-
-  mainWindow.loadURL(startUrl);
+  if (app.isPackaged) {
+    const port = startLocalServer();
+    mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  } else {
+    mainWindow.loadURL("http://localhost:5173");
+  }
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -75,6 +114,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  if (server) server.close();
   if (process.platform !== "darwin") app.quit();
 });
 
