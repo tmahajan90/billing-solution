@@ -1,17 +1,26 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 export default function LoginPage() {
   const { login, register } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem("api_url") || import.meta.env.VITE_API_URL || "http://localhost:3000");
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     restaurant_name: "",
   });
+
+  const handleSaveUrl = () => {
+    const trimmed = apiUrl.replace(/\/+$/, "");
+    api.setBaseUrl(trimmed);
+    setShowSettings(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +49,18 @@ export default function LoginPage() {
 
         {error && <div style={styles.error}>{error}</div>}
 
+        {showSettings && (
+          <div style={styles.settingsBox}>
+            <label style={styles.settingsLabel}>Backend Server URL</label>
+            <input style={styles.input} placeholder="https://xxxx.ngrok-free.app" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} />
+            <div style={styles.settingsActions}>
+              <button style={styles.saveBtn} type="button" onClick={handleSaveUrl}>Save</button>
+              <button style={styles.cancelBtn} type="button" onClick={() => setShowSettings(false)}>Cancel</button>
+            </div>
+            <p style={styles.hint}>Current: {api.baseUrl}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={styles.form}>
           {isRegister && (
             <>
@@ -55,12 +76,17 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={styles.toggle}>
-          {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
-          <button style={styles.link} onClick={() => setIsRegister(!isRegister)}>
-            {isRegister ? "Login" : "Register"}
+        <div style={styles.footerRow}>
+          <p style={styles.toggle}>
+            {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button style={styles.link} onClick={() => setIsRegister(!isRegister)}>
+              {isRegister ? "Login" : "Register"}
+            </button>
+          </p>
+          <button style={styles.gearBtn} type="button" onClick={() => setShowSettings(!showSettings)} title="Server Settings">
+            &#9881;
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -77,4 +103,12 @@ const styles = {
   error: { background: "#fee", color: "#c00", padding: 10, borderRadius: 8, marginBottom: 12, textAlign: "center" },
   toggle: { textAlign: "center", marginTop: 16, color: "#666" },
   link: { background: "none", border: "none", color: "#e94560", cursor: "pointer", fontWeight: 600, fontSize: 14 },
+  footerRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 16 },
+  gearBtn: { background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#999", padding: 4, lineHeight: 1 },
+  settingsBox: { background: "#f9f9f9", borderRadius: 8, padding: 16, marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 },
+  settingsLabel: { fontWeight: 600, fontSize: 14, color: "#333" },
+  settingsActions: { display: "flex", gap: 8 },
+  saveBtn: { padding: "6px 16px", borderRadius: 6, border: "none", background: "#e94560", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 },
+  cancelBtn: { padding: "6px 16px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", color: "#666", cursor: "pointer", fontSize: 13 },
+  hint: { fontSize: 11, color: "#999", margin: 0 },
 };

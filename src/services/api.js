@@ -1,8 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const DEFAULT_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 class ApiClient {
   constructor() {
-    this.baseUrl = API_BASE;
+    this.baseUrl = localStorage.getItem("api_url") || DEFAULT_API_URL;
+  }
+
+  setBaseUrl(url) {
+    this.baseUrl = url;
+    localStorage.setItem("api_url", url);
   }
 
   getToken() {

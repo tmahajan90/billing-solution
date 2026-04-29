@@ -1,7 +1,7 @@
 {
   "name": "petpooja-pos",
   "private": false,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Petpooja POS - Offline-first Point of Sale Desktop App",
   "main": "electron/main.cjs",
   "type": "module",
@@ -10,7 +10,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "vite build && electron .",
+    "electron:start": "electron .",
     "electron:build": "vite build && electron-builder",
     "electron:build:mac": "vite build && electron-builder --mac",
     "electron:build:win": "vite build && electron-builder --win",
