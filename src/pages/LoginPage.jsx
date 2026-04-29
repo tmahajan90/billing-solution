@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Petpooja POS</h1>
+        <h1 style={styles.title}>Billing Solution</h1>
         <h2 style={styles.subtitle}>{isRegister ? "Register" : "Login"}</h2>
 
         {error && <div style={styles.error}>{error}</div>}

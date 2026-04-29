@@ -40,7 +40,7 @@ export default function Layout() {
     <div style={styles.shell}>
       <nav style={styles.nav}>
         <div style={styles.navLeft}>
-          <span style={styles.logo}>Petpooja POS</span>
+          <span style={styles.logo}>Billing Solution</span>
           <span style={styles.tenant}>{tenant?.name}</span>
         </div>
         <div style={styles.navCenter}>

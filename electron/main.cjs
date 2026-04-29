@@ -10,7 +10,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
-    title: "Petpooja POS",
+    title: "Billing Solution",
     icon: path.join(__dirname, "dist", "icon-512.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
