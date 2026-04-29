@@ -7,6 +7,10 @@ import useAutoRefresh from "../hooks/useAutoRefresh";
 import { SYNC_STATUS, syncService } from "../services/sync";
 import api from "../services/api";
 
+function isPercentageDiscountType(t) {
+  return t === "percentage" || t === 1 || t === "1";
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [openOrdersCount, setOpenOrdersCount] = useState(0);
@@ -256,6 +260,27 @@ export default function OrdersPage() {
                   <div style={styles.billTaxRow}><span>SGST ({order.sgst_rate.toFixed(2)}%):</span><span>₹{order.sgst_tax.toFixed(2)}</span></div>
                   <div style={styles.billTaxRow}><span>VAT ({order.vat_rate.toFixed(2)}%):</span><span>₹{order.vat_tax.toFixed(2)}</span></div>
                   <div style={styles.billTaxRow}><span>VAT Surcharge ({order.vat_surcharge_rate.toFixed(2)}% on VAT):</span><span>₹{order.vat_surcharge_tax.toFixed(2)}</span></div>
+                  {parseFloat(order.discount_amount ?? 0) > 0 && (
+                    <div style={styles.billTaxRow}>
+                      <span>
+                        Discount
+                        {isPercentageDiscountType(order.discount_type) && Number(order.discount_value) > 0
+                          ? ` (${Number(order.discount_value)}% on bill)`
+                          : ""}
+                        :
+                      </span>
+                      <span>−₹{parseFloat(order.discount_amount).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Math.abs(parseFloat(order.round_off_amount ?? 0)) >= 0.005 && (
+                    <div style={styles.billTaxRow}>
+                      <span>Round off:</span>
+                      <span>
+                        {parseFloat(order.round_off_amount) > 0 ? "+" : "−"}₹
+                        {Math.abs(parseFloat(order.round_off_amount)).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div style={styles.billTotalRow}>
                     <span>Total:</span>
                     <span style={styles.billTotalAmount}>₹{order.grand_total.toFixed(2)}</span>

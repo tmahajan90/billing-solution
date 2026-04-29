@@ -7,6 +7,12 @@ import { useAuth } from "../context/AuthContext";
 import { SYNC_STATUS } from "../services/sync";
 import useAutoRefresh from "../hooks/useAutoRefresh";
 
+function normalizeDiscountType(raw) {
+  if (raw === "percentage" || raw === 1 || raw === "1") return "percentage";
+  if (raw === "flat" || raw === 2 || raw === "2") return "flat";
+  return "none";
+}
+
 export default function POSPage() {
   const { orderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -22,6 +28,8 @@ export default function POSPage() {
   const [selectedTableId, setSelectedTableId] = useState(tableId || null);
   const [allTables, setAllTables] = useState([]);
   const [existingOrder, setExistingOrder] = useState(null);
+  const [discountType, setDiscountType] = useState("none");
+  const [discountValueInput, setDiscountValueInput] = useState("");
   const { isOnline, syncVersion } = useOffline();
   const { tenant } = useAuth();
 
@@ -48,6 +56,14 @@ export default function POSPage() {
   const sgstRate = Number(tenantTax.sgst_rate ?? 2.5);
   const vatRate = Number(tenantTax.vat_rate ?? 20);
   const vatSurchargeRate = Number(tenantTax.vat_surcharge_rate ?? 0);
+
+  // Only when opening a brand-new order — not on every sync / auto-refresh (those were clearing discount).
+  useEffect(() => {
+    if (orderId && orderId !== "new") return;
+    setExistingOrder(null);
+    setDiscountType("none");
+    setDiscountValueInput("");
+  }, [orderId]);
 
   useEffect(() => {
     loadData();
@@ -138,6 +154,9 @@ export default function POSPage() {
     setExistingOrder(order);
     setCustomerName(order.customer_name || "");
     setCustomerPhone(order.customer_phone || "");
+    const dType = normalizeDiscountType(order.discount_type);
+    setDiscountType(dType);
+    setDiscountValueInput(dType === "none" || order.discount_value == null ? "" : String(order.discount_value));
 
     if (order.table_id) {
       setSelectedTableId(order.table_id);
@@ -233,7 +252,20 @@ export default function POSPage() {
   const gstTaxAmount = cgstTaxAmount + sgstTaxAmount;
   const vatTaxAmount = vatEnabled ? (vatSubtotal * vatRate) / 100 : 0;
   const vatSurchargeAmount = vatSurchargeEnabled ? (vatTaxAmount * vatSurchargeRate) / 100 : 0;
-  const grandTotal = subtotal + gstTaxAmount + vatTaxAmount + vatSurchargeAmount;
+  const totalBeforeDiscount =
+    Math.round((subtotal + cgstTaxAmount + sgstTaxAmount + vatTaxAmount + vatSurchargeAmount) * 100) / 100;
+  const rawDiscountParam = parseFloat(String(discountValueInput).replace(",", ".")) || 0;
+  let discountAmount = 0;
+  if (discountType === "percentage" && rawDiscountParam > 0) {
+    discountAmount = Math.min(totalBeforeDiscount, (totalBeforeDiscount * rawDiscountParam) / 100);
+  } else if (discountType === "flat" && rawDiscountParam > 0) {
+    discountAmount = Math.min(totalBeforeDiscount, rawDiscountParam);
+  }
+  discountAmount = Math.round(discountAmount * 100) / 100;
+  const exactPayable = Math.max(0, Math.round((totalBeforeDiscount - discountAmount) * 100) / 100);
+  const roundedTotal = Math.max(0, Math.round(exactPayable));
+  const roundOffAmount = Math.round((roundedTotal - exactPayable) * 100) / 100;
+  const grandTotal = roundedTotal;
   const exitPath = orderId === "new" ? (selectedTableId ? "/tables" : "/orders") : "/tables";
 
   const placeOrder = async () => {
@@ -274,6 +306,10 @@ export default function POSPage() {
         vat_surcharge_enabled: vatSurchargeEnabled,
         vat_surcharge_rate: vatSurchargeRate,
         vat_surcharge_amount: vatSurchargeAmount,
+        discount_type: discountType,
+        discount_value: discountType === "none" ? 0 : rawDiscountParam,
+        discount_amount: discountAmount,
+        round_off_amount: roundOffAmount,
         customer_name: customerName || "Walk-in",
         customer_phone: customerPhone,
         status: "confirmed",
@@ -306,6 +342,10 @@ export default function POSPage() {
         vat_surcharge_enabled: vatSurchargeEnabled,
         vat_surcharge_rate: vatSurchargeRate,
         vat_surcharge_amount: vatSurchargeAmount,
+        discount_type: discountType,
+        discount_value: discountType === "none" ? 0 : rawDiscountParam,
+        discount_amount: discountAmount,
+        round_off_amount: roundOffAmount,
         customer_name: customerName || "Walk-in",
         customer_phone: customerPhone,
         version: 1,
@@ -407,7 +447,7 @@ export default function POSPage() {
 
         <div style={styles.customerInputs}>
           <select
-            style={styles.select}
+            style={styles.selectTable}
             value={selectedTableId || ""}
             onChange={(e) => {
               const id = e.target.value || null;
@@ -482,6 +522,55 @@ export default function POSPage() {
             <span>VAT Surcharge ({vatSurchargeRate.toFixed(2)}% on VAT):</span>
             <span>₹{vatSurchargeAmount.toFixed(2)}</span>
           </div>
+          <div style={styles.discountSectionWrap}>
+            <div style={styles.discountBlock}>
+              <div style={styles.discountSectionTitle}>Discount</div>
+              <p style={styles.discountHint}>After tax — reduces the final total</p>
+              <select
+                style={styles.selectDiscount}
+                value={discountType}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDiscountType(v);
+                  if (v === "none") setDiscountValueInput("");
+                }}
+              >
+                <option value="none">No discount</option>
+                <option value="percentage">Percentage</option>
+                <option value="flat">Fixed ₹</option>
+              </select>
+              {discountType !== "none" && (
+                <input
+                  style={styles.inputDiscount}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  max={discountType === "percentage" ? "100" : undefined}
+                  inputMode="decimal"
+                  placeholder={discountType === "percentage" ? "Percent" : "Rupees"}
+                  value={discountValueInput}
+                  onChange={(e) => setDiscountValueInput(e.target.value)}
+                />
+              )}
+              {discountAmount > 0 && (
+                <div style={styles.discountAppliedRow}>
+                  <span>
+                    Off bill
+                    {discountType === "percentage" && discountValueInput ? ` (${discountValueInput}%)` : ""}
+                  </span>
+                  <span style={styles.discountAppliedAmt}>−₹{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          {roundOffAmount !== 0 && (
+            <div style={styles.taxRow}>
+              <span>Round off:</span>
+              <span>
+                {roundOffAmount > 0 ? "+" : "−"}₹{Math.abs(roundOffAmount).toFixed(2)}
+              </span>
+            </div>
+          )}
           <div style={styles.totalRow}>
             <span>Total:</span>
             <span style={styles.totalAmount}>₹{grandTotal.toFixed(2)}</span>
@@ -532,8 +621,96 @@ const styles = {
   productCategory: { fontSize: 12, color: "#999", marginBottom: 8 },
   productPrice: { fontSize: 16, fontWeight: 700, color: "#e94560" },
   customerInputs: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 },
-  select: { padding: "8px 12px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13, background: "#fff" },
+  discountSectionWrap: { marginTop: 10 },
+  discountBlock: {
+    borderRadius: 10,
+    padding: "12px 12px 12px 14px",
+    background: "linear-gradient(180deg, #fff9fa 0%, #fdf5f6 100%)",
+    border: "1px solid #f3e0e4",
+    borderLeft: "4px solid #e94560",
+    boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  discountSectionTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: "#c73e54",
+    margin: 0,
+    padding: 0,
+  },
+  discountHint: {
+    margin: "-4px 0 0",
+    fontSize: 11,
+    color: "#9a8f92",
+    lineHeight: 1.35,
+  },
+  discountAppliedRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: 13,
+    color: "#555",
+    marginTop: 2,
+    paddingTop: 8,
+    borderTop: "1px dashed #e8cdd2",
+  },
+  discountAppliedAmt: { fontWeight: 700, color: "#c73e54", fontVariantNumeric: "tabular-nums" },
+  selectTable: {
+    width: "100%",
+    padding: "11px 40px 11px 14px",
+    borderRadius: 8,
+    border: "1px solid #dfe3e8",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#1a1a2e",
+    backgroundColor: "#fff",
+    cursor: "pointer",
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231a1a2e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    backgroundSize: "16px",
+    boxShadow: "0 1px 3px rgba(26, 26, 46, 0.06)",
+  },
+  selectDiscount: {
+    width: "100%",
+    padding: "11px 40px 11px 14px",
+    borderRadius: 8,
+    border: "1px solid #e5c8ce",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#4a3540",
+    backgroundColor: "#fff",
+    cursor: "pointer",
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    backgroundImage:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e94560' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    backgroundSize: "16px",
+    boxShadow: "0 1px 4px rgba(233, 69, 96, 0.08)",
+  },
   input: { padding: "8px 12px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13 },
+  inputDiscount: {
+    width: "100%",
+    padding: "11px 14px",
+    borderRadius: 8,
+    border: "1px solid #e5c8ce",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#4a3540",
+    backgroundColor: "#fff",
+    boxShadow: "0 1px 4px rgba(233, 69, 96, 0.06)",
+  },
   cartItems: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 },
   taxSectionTitle: {
     marginTop: 4,
