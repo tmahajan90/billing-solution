@@ -1,16 +1,55 @@
 {
-  "name": "pos_frontend",
-  "private": true,
-  "version": "0.0.0",
+  "name": "petpooja-pos",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Petpooja POS - Offline-first Point of Sale Desktop App",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "vite build && electron .",
+    "electron:build": "vite build && electron-builder",
+    "electron:build:mac": "vite build && electron-builder --mac",
+    "electron:build:win": "vite build && electron-builder --win",
+    "electron:build:linux": "vite build && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.petpooja.pos",
+    "productName": "Petpooja POS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["universal"] }
+      ],
+      "icon": "public/icon-512.png",
+      "category": "public.app-category.business"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/icon-512.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon-512.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "tmahajan90",
+      "repo": "pos-frontend"
+    }
   },
   "dependencies": {
     "dexie": "^4.4.2",
+    "electron-updater": "^6.8.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
@@ -21,6 +60,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
