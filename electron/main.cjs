@@ -21,28 +21,39 @@ const MIME_TYPES = {
 };
 
 function startLocalServer() {
-  const distPath = path.join(__dirname, "..", "dist");
+  return new Promise((resolve, reject) => {
+    const distPath = path.join(__dirname, "..", "dist");
 
-  server = http.createServer((req, res) => {
-    let filePath = path.join(distPath, req.url === "/" ? "index.html" : req.url);
-    const ext = path.extname(filePath);
-    res.setHeader("Content-Type", MIME_TYPES[ext] || "application/octet-stream");
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end("Not found");
-      } else {
-        res.writeHead(200);
-        res.end(data);
+    server = http.createServer((req, res) => {
+      let urlPath = req.url.split("?")[0];
+      let filePath = path.join(distPath, urlPath === "/" ? "index.html" : urlPath);
+
+      if (!fs.existsSync(filePath)) {
+        filePath = path.join(distPath, "index.html");
       }
-    });
-  });
 
-  server.listen(0, "127.0.0.1");
-  return server.address().port;
+      const ext = path.extname(filePath);
+      res.setHeader("Content-Type", MIME_TYPES[ext] || "application/octet-stream");
+      fs.readFile(filePath, (err, data) => {
+        if (err) {
+          res.writeHead(404);
+          res.end("Not found");
+        } else {
+          res.writeHead(200);
+          res.end(data);
+        }
+      });
+    });
+
+    server.listen(0, "127.0.0.1", () => {
+      resolve(server.address().port);
+    });
+
+    server.on("error", reject);
+  });
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -58,7 +69,7 @@ function createWindow() {
   });
 
   if (app.isPackaged) {
-    const port = startLocalServer();
+    const port = await startLocalServer();
     mainWindow.loadURL(`http://127.0.0.1:${port}`);
   } else {
     mainWindow.loadURL("http://localhost:5173");
@@ -106,8 +117,8 @@ function setupAutoUpdater() {
   autoUpdater.checkForUpdates();
 }
 
-app.whenReady().then(() => {
-  createWindow();
+app.whenReady().then(async () => {
+  await createWindow();
   if (app.isPackaged) {
     setupAutoUpdater();
   }
