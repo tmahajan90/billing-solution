@@ -18,6 +18,7 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...(this.getToken() && { Authorization: `Bearer ${this.getToken()}` }),
       ...options.headers,
     };
