@@ -20,7 +20,7 @@ function createWindow() {
   });
 
   const startUrl = app.isPackaged
-    ? `file://${path.join(__dirname, "dist", "index.html")}`
+    ? `file://${path.resolve(__dirname, "dist", "index.html")}`
     : "http://localhost:5173";
 
   mainWindow.loadURL(startUrl);

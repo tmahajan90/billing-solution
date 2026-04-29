@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OfflineProvider } from "./context/OfflineContext";
 import Layout from "./components/Layout";
@@ -19,7 +19,7 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <OfflineProvider>
           <Routes>
@@ -35,7 +35,7 @@ function App() {
           </Routes>
         </OfflineProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
