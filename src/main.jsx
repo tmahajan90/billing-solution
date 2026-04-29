@@ -10,7 +10,7 @@ if ("serviceWorker" in navigator) {
     });
   } else {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
     });
   }
 }

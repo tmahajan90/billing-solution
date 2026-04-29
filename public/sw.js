@@ -1,12 +1,12 @@
 const CACHE_NAME = "pos-cache-v1";
 
 const PRECACHE_URLS = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/favicon.svg",
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./favicon.svg",
 ];
 
 self.addEventListener("install", (event) => {
