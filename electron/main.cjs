@@ -11,7 +11,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 600,
     title: "Billing Solution",
-    icon: path.join(__dirname, "dist", "icon-512.png"),
+    icon: path.join(__dirname, "..", "dist", "icon-512.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       nodeIntegration: false,
@@ -20,7 +20,7 @@ function createWindow() {
   });
 
   const startUrl = app.isPackaged
-    ? `file://${path.sep}${path.join(__dirname, "dist", "index.html")}`
+    ? `file://${path.sep}${path.join(__dirname, "..", "dist", "index.html")}`
     : "http://localhost:5173";
 
   mainWindow.loadURL(startUrl);

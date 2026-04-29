@@ -1,7 +1,7 @@
 {
   "name": "billing-solution",
   "private": false,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Billing Solution - Offline-first Point of Sale Desktop App",
   "main": "electron/main.cjs",
   "type": "module",
