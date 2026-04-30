@@ -69,6 +69,14 @@ export default function POSPage() {
     loadData();
   }, [orderId, tableId, syncVersion]);
 
+  // Load order + cart + discount from DB only when navigating to this order — not on sync/interval refresh,
+  // or unsaved discount type/value gets overwritten from stale stored discount_type.
+  useEffect(() => {
+    if (!orderId || orderId === "new") return;
+    loadExistingOrder(orderId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-load when route orderId changes
+  }, [orderId]);
+
   const loadData = async () => {
     await loadProducts();
     const tables = await db.pos_tables.toArray();
@@ -76,9 +84,6 @@ export default function POSPage() {
       (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" })
     );
     setAllTables(sortedTables);
-    if (orderId && orderId !== "new") {
-      await loadExistingOrder(orderId);
-    }
     if (tableId) {
       const table = await db.pos_tables.get(tableId);
       if (table) {
@@ -502,9 +507,9 @@ export default function POSPage() {
         </div>
 
         <div style={styles.cartFooter}>
-          <div style={styles.totalRow}>
+          <div style={styles.subtotalSummaryRow}>
             <span>Subtotal:</span>
-            <span style={styles.subtotalAmount}>₹{subtotal.toFixed(2)}</span>
+            <span style={styles.subtotalSummaryAmount}>₹{subtotal.toFixed(2)}</span>
           </div>
           <div style={styles.taxRow}>
             <span>CGST ({cgstRate.toFixed(2)}%):</span>
@@ -524,34 +529,38 @@ export default function POSPage() {
           </div>
           <div style={styles.discountSectionWrap}>
             <div style={styles.discountBlock}>
-              <div style={styles.discountSectionTitle}>Discount</div>
-              <p style={styles.discountHint}>After tax — reduces the final total</p>
-              <select
-                style={styles.selectDiscount}
-                value={discountType}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setDiscountType(v);
-                  if (v === "none") setDiscountValueInput("");
-                }}
-              >
-                <option value="none">No discount</option>
-                <option value="percentage">Percentage</option>
-                <option value="flat">Fixed ₹</option>
-              </select>
-              {discountType !== "none" && (
-                <input
-                  style={styles.inputDiscount}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  max={discountType === "percentage" ? "100" : undefined}
-                  inputMode="decimal"
-                  placeholder={discountType === "percentage" ? "Percent" : "Rupees"}
-                  value={discountValueInput}
-                  onChange={(e) => setDiscountValueInput(e.target.value)}
-                />
-              )}
+              <div style={styles.discountHeaderLine}>
+                <span style={styles.discountSectionTitle}>Discount</span>
+                <span style={styles.discountHintInline}>After tax — reduces the final total</span>
+              </div>
+              <div style={styles.discountFieldsRow}>
+                <select
+                  style={styles.selectDiscount}
+                  value={discountType}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDiscountType(v);
+                    setDiscountValueInput("");
+                  }}
+                >
+                  <option value="none">No discount</option>
+                  <option value="percentage">Percentage</option>
+                  <option value="flat">Fixed ₹</option>
+                </select>
+                {discountType !== "none" && (
+                  <input
+                    style={styles.inputDiscountInline}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    max={discountType === "percentage" ? "100" : undefined}
+                    inputMode="decimal"
+                    placeholder={discountType === "percentage" ? "%" : "₹"}
+                    value={discountValueInput}
+                    onChange={(e) => setDiscountValueInput(e.target.value)}
+                  />
+                )}
+              </div>
               {discountAmount > 0 && (
                 <div style={styles.discountAppliedRow}>
                   <span>
@@ -577,17 +586,15 @@ export default function POSPage() {
           </div>
           <div style={styles.btnRow}>
             <button style={{ ...styles.placeOrderBtn, ...(cart.length === 0 ? styles.disabled : {}) }} onClick={placeOrder} disabled={cart.length === 0}>
-              {existingOrder ? "Update Order" : "Place Order"} {!isOnline && "(Offline)"}
+              {existingOrder ? "Update Order" : "Place Order"}
+              {!isOnline && <span style={styles.offlineHint}> (Offline)</span>}
             </button>
             {existingOrder && (
-              <button style={styles.closeBtn} onClick={closeOrder}>
+              <button type="button" style={styles.closeBtn} onClick={closeOrder}>
                 Close Order
               </button>
             )}
           </div>
-          <button style={styles.backBtn} onClick={() => navigate(exitPath)}>
-            {exitPath === "/orders" ? "Back to Orders" : "Back to Tables"}
-          </button>
         </div>
       </div>
     </div>
@@ -633,20 +640,32 @@ const styles = {
     flexDirection: "column",
     gap: 8,
   },
+  discountHeaderLine: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: "4px 10px",
+    rowGap: 4,
+  },
   discountSectionTitle: {
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: "#c73e54",
-    margin: 0,
-    padding: 0,
+    flexShrink: 0,
   },
-  discountHint: {
-    margin: "-4px 0 0",
+  discountHintInline: {
     fontSize: 11,
     color: "#9a8f92",
+    fontWeight: 500,
     lineHeight: 1.35,
+  },
+  discountFieldsRow: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 8,
   },
   discountAppliedRow: {
     display: "flex",
@@ -680,7 +699,9 @@ const styles = {
     boxShadow: "0 1px 3px rgba(26, 26, 46, 0.06)",
   },
   selectDiscount: {
-    width: "100%",
+    flex: 1,
+    minWidth: 0,
+    width: "auto",
     padding: "11px 40px 11px 14px",
     borderRadius: 8,
     border: "1px solid #e5c8ce",
@@ -700,9 +721,12 @@ const styles = {
     boxShadow: "0 1px 4px rgba(233, 69, 96, 0.08)",
   },
   input: { padding: "8px 12px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13 },
-  inputDiscount: {
-    width: "100%",
-    padding: "11px 14px",
+  inputDiscountInline: {
+    flex: "0 0 96px",
+    width: 96,
+    minWidth: 72,
+    maxWidth: 120,
+    padding: "11px 10px",
     borderRadius: 8,
     border: "1px solid #e5c8ce",
     fontSize: 13,
@@ -710,6 +734,7 @@ const styles = {
     color: "#4a3540",
     backgroundColor: "#fff",
     boxShadow: "0 1px 4px rgba(233, 69, 96, 0.06)",
+    textAlign: "center",
   },
   cartItems: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 },
   taxSectionTitle: {
@@ -736,13 +761,45 @@ const styles = {
   emptyCart: { color: "#999", textAlign: "center", padding: 24, fontSize: 13 },
   empty: { color: "#999", textAlign: "center", padding: 40, fontSize: 14, gridColumn: "1 / -1" },
   cartFooter: { borderTop: "2px solid #f0f0f0", paddingTop: 12, marginTop: 8 },
+  subtotalSummaryRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#666",
+    marginBottom: 8,
+  },
+  subtotalSummaryAmount: { color: "#444", fontVariantNumeric: "tabular-nums" },
   totalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 700, marginBottom: 12 },
   taxRow: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#666", marginBottom: 6 },
-  subtotalAmount: { color: "#333" },
   totalAmount: { color: "#e94560" },
-  btnRow: { display: "flex", gap: 8 },
-  placeOrderBtn: { flex: 1, padding: "14px", borderRadius: 8, border: "none", background: "#e94560", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" },
+  btnRow: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" },
+  placeOrderBtn: {
+    flex: 1,
+    minWidth: 0,
+    padding: "8px 12px",
+    borderRadius: 6,
+    border: "none",
+    background: "#e94560",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    lineHeight: 1.3,
+  },
+  offlineHint: { fontSize: 11, fontWeight: 500, opacity: 0.9 },
   disabled: { opacity: 0.5, cursor: "not-allowed" },
-  closeBtn: { padding: "14px 20px", borderRadius: 8, border: "1px solid #4caf50", background: "#fff", color: "#4caf50", fontSize: 14, fontWeight: 700, cursor: "pointer" },
-  backBtn: { width: "100%", marginTop: 8, padding: "10px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", color: "#666", fontSize: 13, cursor: "pointer" },
+  closeBtn: {
+    padding: "8px 12px",
+    borderRadius: 6,
+    border: "1px solid #4caf50",
+    background: "#fff",
+    color: "#2e7d32",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    lineHeight: 1.3,
+    flexShrink: 0,
+  },
 };
