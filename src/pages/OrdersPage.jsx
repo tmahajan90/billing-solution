@@ -49,6 +49,12 @@ export default function OrdersPage() {
       tableMap[t.id] = t.name;
     }
 
+    const staffMap = {};
+    const allStaff = await db.staff.toArray();
+    for (const s of allStaff) {
+      staffMap[s.id] = s.name;
+    }
+
     const persistedTenant = (() => {
       try {
         const raw = localStorage.getItem("tenant");
@@ -116,6 +122,7 @@ export default function OrdersPage() {
         vat_surcharge_tax: vatSurchargeTax,
         grand_total: grandTotal,
         table_name: order.table_id ? (tableMap[order.table_id] || null) : null,
+        assigned_staff_name: order.assigned_staff_id ? (staffMap[order.assigned_staff_id] || null) : null,
       });
     }
 
@@ -233,6 +240,7 @@ export default function OrdersPage() {
             <div style={styles.orderBody}>
               <div style={styles.customerInfo}>
                 {order.table_name && <span style={styles.tableTag}>Table: {order.table_name}</span>}
+                {order.assigned_staff_name && <span style={styles.staffTag}>Staff: {order.assigned_staff_name}</span>}
                 {order.customer_name}
                 {order.customer_phone && <span style={styles.phone}> - {order.customer_phone}</span>}
               </div>
@@ -332,6 +340,7 @@ const styles = {
   orderBody: { marginBottom: 8 },
   customerInfo: { fontSize: 13, color: "#555", marginBottom: 6 },
   tableTag: { background: "#1a1a2e", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, marginRight: 8 },
+  staffTag: { background: "#6366f1", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, marginRight: 8 },
   phone: { color: "#888" },
   orderItems: { display: "flex", flexDirection: "column", gap: 2 },
   taxSectionTitle: {

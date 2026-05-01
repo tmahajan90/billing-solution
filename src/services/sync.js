@@ -39,6 +39,7 @@ export const syncService = {
         ordersPayload.push({
           id: order.id,
           table_id: order.table_id || null,
+          assigned_staff_id: order.assigned_staff_id || null,
           status: order.status,
           total: order.total,
           subtotal: order.subtotal ?? order.total ?? 0,
@@ -109,6 +110,7 @@ export const syncService = {
       }));
       const serverTables = result.tables || [];
       const serverOrders = result.orders || [];
+      const serverStaff = result.staff || [];
       const deletedIds = result.deleted_order_ids || [];
 
       await db.products.clear();
@@ -116,6 +118,9 @@ export const syncService = {
 
       await db.pos_tables.clear();
       await db.pos_tables.bulkPut(serverTables);
+
+      await db.staff.clear();
+      await db.staff.bulkPut(serverStaff);
 
       for (const order of serverOrders) {
         const existing = await db.orders.get(order.id);
@@ -133,6 +138,7 @@ export const syncService = {
             tenant_id: order.tenant_id,
             user_id: order.user_id,
             table_id: order.table_id || null,
+            assigned_staff_id: order.assigned_staff_id || null,
             status: order.status,
             total: parseFloat(order.total),
             subtotal: parseFloat(order.subtotal ?? order.total ?? 0),

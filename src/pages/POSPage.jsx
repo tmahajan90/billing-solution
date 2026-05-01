@@ -23,15 +23,37 @@ export default function POSPage() {
   const [cart, setCart] = useState([]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerDiscountApplied, setCustomerDiscountApplied] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [tableName, setTableName] = useState("");
   const [selectedTableId, setSelectedTableId] = useState(tableId || null);
   const [allTables, setAllTables] = useState([]);
+  const [allStaff, setAllStaff] = useState([]);
+  const [selectedStaffId, setSelectedStaffId] = useState(null);
   const [existingOrder, setExistingOrder] = useState(null);
   const [discountType, setDiscountType] = useState("none");
   const [discountValueInput, setDiscountValueInput] = useState("");
   const { isOnline, syncVersion } = useOffline();
   const { tenant } = useAuth();
+
+  const handleCustomerPhoneBlur = useCallback(async () => {
+    const phone = customerPhone.trim();
+    if (!phone || phone.length < 4) return;
+    if (customerDiscountApplied) return;
+    try {
+      const { default: api } = await import("../services/api");
+      const customer = await api.get(`/api/customers/lookup?phone=${encodeURIComponent(phone)}`);
+      if (!customer || customer.error) return;
+      if (customer.name) setCustomerName(customer.name);
+      if (customer.discount_type === "percentage" || customer.discount_type === "flat") {
+        setDiscountType(customer.discount_type === "flat" ? "flat" : "percentage");
+        setDiscountValueInput(String(customer.discount_value));
+        setCustomerDiscountApplied(true);
+      }
+    } catch {
+      // offline or not found
+    }
+  }, [customerPhone, customerDiscountApplied]);
 
   const persistedTenant = (() => {
     try {
@@ -63,6 +85,8 @@ export default function POSPage() {
     setExistingOrder(null);
     setDiscountType("none");
     setDiscountValueInput("");
+    setCustomerDiscountApplied(false);
+    setSelectedStaffId(null);
   }, [orderId]);
 
   useEffect(() => {
@@ -84,6 +108,8 @@ export default function POSPage() {
       (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" })
     );
     setAllTables(sortedTables);
+    const staff = await db.staff.toArray();
+    setAllStaff(staff);
     if (tableId) {
       const table = await db.pos_tables.get(tableId);
       if (table) {
@@ -162,6 +188,7 @@ export default function POSPage() {
     const dType = normalizeDiscountType(order.discount_type);
     setDiscountType(dType);
     setDiscountValueInput(dType === "none" || order.discount_value == null ? "" : String(order.discount_value));
+    setSelectedStaffId(order.assigned_staff_id || null);
 
     if (order.table_id) {
       setSelectedTableId(order.table_id);
@@ -275,6 +302,10 @@ export default function POSPage() {
 
   const placeOrder = async () => {
     if (cart.length === 0) return;
+    if (selectedTableId && !selectedStaffId) {
+      alert("Please assign a staff member when a table is selected.");
+      return;
+    }
 
     const now = new Date().toISOString();
 
@@ -294,6 +325,8 @@ export default function POSPage() {
       }
 
       await db.orders.update(existingOrder.id, {
+        table_id: selectedTableId || null,
+        assigned_staff_id: selectedTableId ? (selectedStaffId || null) : null,
         total: grandTotal,
         subtotal,
         gst_enabled: cgstEnabled || sgstEnabled,
@@ -328,6 +361,7 @@ export default function POSPage() {
       const order = {
         id: newOrderId,
         table_id: selectedTableId || null,
+        assigned_staff_id: selectedTableId ? (selectedStaffId || null) : null,
         status: "confirmed",
         sync_status: SYNC_STATUS.PENDING,
         total: grandTotal,
@@ -408,7 +442,7 @@ export default function POSPage() {
       <div style={styles.productsPanel}>
         <div style={styles.panelHeader}>
           <h2 style={styles.panelTitle}>Menu</h2>
-          {tableName && <span style={styles.tableBadge}>Table: {tableName}</span>}
+          {tableName && <span style={styles.tableBadge}>Table: {tableName}{selectedStaffId && ` · ${allStaff.find((s) => s.id === selectedStaffId)?.name || ""}`}</span>}
         </div>
         <div style={styles.categories}>
           {categories.map((cat) => (
@@ -451,23 +485,38 @@ export default function POSPage() {
         </h2>
 
         <div style={styles.customerInputs}>
-          <select
-            style={styles.selectTable}
-            value={selectedTableId || ""}
-            onChange={(e) => {
-              const id = e.target.value || null;
-              setSelectedTableId(id);
-              const t = allTables.find((tbl) => tbl.id === id);
-              setTableName(t ? t.name : "");
-            }}
-          >
-            <option value="">No Table</option>
-            {allTables.map((t) => (
-              <option key={t.id} value={t.id}>{t.name} ({t.area || "No Area"}, {t.capacity} seats)</option>
-            ))}
-          </select>
-          <input style={styles.input} placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-          <input style={styles.input} placeholder="Phone (optional)" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <select
+              style={{ ...styles.selectTable, flex: 1 }}
+              value={selectedTableId || ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSelectedTableId(id);
+                const t = allTables.find((tbl) => tbl.id === id);
+                setTableName(t ? t.name : "");
+              }}
+            >
+              <option value="">No Table</option>
+              {allTables.map((t) => (
+                <option key={t.id} value={t.id}>{t.name} ({t.area || "No Area"}, {t.capacity} seats)</option>
+              ))}
+            </select>
+            <select
+              style={{ ...styles.selectTable, flex: 1, opacity: selectedTableId ? 1 : 0.5 }}
+              value={selectedStaffId || ""}
+              onChange={(e) => setSelectedStaffId(e.target.value || null)}
+              disabled={!selectedTableId}
+            >
+              <option value="">Assign Staff *</option>
+              {allStaff.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input style={{ ...styles.input, flex: 1 }} placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+            <input style={{ ...styles.input, flex: 1 }} placeholder="Phone (optional)" value={customerPhone} onChange={(e) => { setCustomerPhone(e.target.value); setCustomerDiscountApplied(false); }} onBlur={handleCustomerPhoneBlur} />
+          </div>
         </div>
 
         <div style={styles.cartItems}>
@@ -566,6 +615,7 @@ export default function POSPage() {
                   <span>
                     Off bill
                     {discountType === "percentage" && discountValueInput ? ` (${discountValueInput}%)` : ""}
+                    {customerDiscountApplied && <span style={styles.customerDiscountBadge}>Customer</span>}
                   </span>
                   <span style={styles.discountAppliedAmt}>−₹{discountAmount.toFixed(2)}</span>
                 </div>
@@ -606,7 +656,7 @@ const styles = {
   productsPanel: { flex: 2, display: "flex", flexDirection: "column", gap: 12 },
   panelHeader: { display: "flex", alignItems: "center", gap: 12 },
   tableBadge: { background: "#1a1a2e", color: "#fff", padding: "4px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600 },
-  cartPanel: { flex: 1, background: "#fff", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxWidth: 380 },
+  cartPanel: { flex: 1, background: "#fff", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxWidth: 480, minWidth: 380 },
   panelTitle: { margin: "0 0 8px", fontSize: 18, color: "#333" },
   categories: { display: "flex", gap: 8, flexWrap: "wrap" },
   catBtn: { padding: "6px 16px", borderRadius: 20, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13 },
@@ -678,6 +728,18 @@ const styles = {
     borderTop: "1px dashed #e8cdd2",
   },
   discountAppliedAmt: { fontWeight: 700, color: "#c73e54", fontVariantNumeric: "tabular-nums" },
+  customerDiscountBadge: {
+    display: "inline-block",
+    marginLeft: 6,
+    padding: "1px 6px",
+    borderRadius: 8,
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    background: "#fce7f3",
+    color: "#9d174d",
+    letterSpacing: 0.3,
+  },
   selectTable: {
     width: "100%",
     padding: "11px 40px 11px 14px",
