@@ -337,7 +337,7 @@ export default function POSPage() {
 
       await db.orders.update(existingOrder.id, {
         table_id: selectedTableId || null,
-        assigned_staff_id: selectedTableId ? (selectedStaffId || null) : null,
+        assigned_staff_id: selectedTableId ? (user?.role === "staff" && user.id ? user.id : (selectedStaffId || null)) : null,
         total: grandTotal,
         subtotal,
         gst_enabled: cgstEnabled || sgstEnabled,
@@ -372,7 +372,7 @@ export default function POSPage() {
       const order = {
         id: newOrderId,
         table_id: selectedTableId || null,
-        assigned_staff_id: selectedTableId ? (selectedStaffId || null) : null,
+        assigned_staff_id: selectedTableId ? (user?.role === "staff" && user.id ? user.id : (selectedStaffId || null)) : null,
         status: "confirmed",
         sync_status: SYNC_STATUS.PENDING,
         total: grandTotal,
