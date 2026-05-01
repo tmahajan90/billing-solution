@@ -35,11 +35,15 @@ Two jobs run in parallel:
 | macOS     | `macos-latest`  | Universal **.dmg** in `billing-solution-macos` |
 | Windows   | `windows-latest`| **NSIS Setup .exe** in `billing-solution-windows` |
 
-Download the artifacts from the workflow run summary page.
+Download the artifacts from the workflow run summary page (each job uploads its own artifact).
 
-### Publishing to GitHub Releases (optional)
+### Installers on the Releases page
 
-`package.json` includes `build.publish` pointing at `tmahajan90/billing-solution`. To attach installers to a GitHub Release automatically, configure a `GH_TOKEN` with `contents: write` and run electron-builder with `--publish always` (not enabled in this workflow by default).
+When the workflow is triggered by a **version tag** (`v*`, e.g. `v1.3.1`), a final job uploads the **.dmg** and **.exe** from those artifacts onto the [GitHub Release](https://github.com/tmahajan90/billing-solution/releases) for that tag (so users see them under **Assets** on the release page).
+
+To **backfill assets** for an existing tag (for example `v1.3.1` already exists but has no files): merge the latest workflow, then in GitHub go to **Actions → Electron release build → Run workflow**, choose **Use workflow from** → tag **v1.3.1**, and run. When the run finishes, refresh the [release page](https://github.com/tmahajan90/billing-solution/releases/tag/v1.3.1).
+
+`package.json` still has `build.publish` for **electron-updater**; CI uses `softprops/action-gh-release` instead of `electron-builder --publish` so local builds stay offline-friendly (`--publish never`).
 
 ## Icons
 
