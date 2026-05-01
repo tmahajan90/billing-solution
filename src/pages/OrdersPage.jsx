@@ -7,8 +7,16 @@ import useAutoRefresh from "../hooks/useAutoRefresh";
 import { SYNC_STATUS, syncService } from "../services/sync";
 import api from "../services/api";
 
-function isPercentageDiscountType(t) {
-  return t === "percentage" || t === 1 || t === "1";
+function normalizeDiscountType(raw) {
+  if (raw === "percentage" || raw === 1 || raw === "1") return "percentage";
+  if (raw === "flat" || raw === 2 || raw === "2") return "flat";
+  return "none";
+}
+
+function discountLabelSuffix(typeNorm, valueNum) {
+  if (typeNorm === "percentage" && valueNum > 0) return ` (${valueNum}% on bill)`;
+  if (typeNorm === "flat" && valueNum > 0) return ` (₹${valueNum.toFixed(2)} flat)`;
+  return "";
 }
 
 export default function OrdersPage() {
@@ -103,7 +111,23 @@ export default function OrdersPage() {
       const snapSgstRate = hasSnapshot ? Number(order.sgst_rate ?? ((Number(order.gst_rate ?? (cgstRate + sgstRate))) / 2)) : sgstRate;
       const snapVatRate = hasSnapshot ? Number(order.vat_rate ?? vatRate) : vatRate;
       const snapVatSurchargeRate = hasSnapshot ? Number(order.vat_surcharge_rate ?? vatSurchargeRate) : vatSurchargeRate;
-      const grandTotal = parseFloat(order.total ?? (subtotal + gstTax + vatTax + vatSurchargeTax));
+      const billBeforeDiscount = subtotal + gstTax + vatTax + vatSurchargeTax;
+      const storedDisc = parseFloat(order.discount_amount ?? 0);
+      const roundOff = parseFloat(order.round_off_amount ?? 0);
+      const totalParsed = order.total != null ? parseFloat(order.total) : NaN;
+      const impliedFromTotal =
+        Number.isFinite(totalParsed) && billBeforeDiscount > 0
+          ? Math.max(0, Math.round((billBeforeDiscount - totalParsed + roundOff) * 100) / 100)
+          : 0;
+      const discountAmountDisplay =
+        storedDisc > 0.004 ? storedDisc : impliedFromTotal > 0.004 ? impliedFromTotal : 0;
+      const discountTypeNorm = normalizeDiscountType(order.discount_type);
+      const discountValueNum = Number(order.discount_value ?? 0);
+      const showDiscountRow = discountAmountDisplay > 0.004;
+
+      const grandTotal = parseFloat(
+        order.total ?? Math.max(0, billBeforeDiscount - discountAmountDisplay + roundOff)
+      );
 
       enriched.push({
         ...order,
@@ -121,6 +145,10 @@ export default function OrdersPage() {
         vat_tax: vatTax,
         vat_surcharge_tax: vatSurchargeTax,
         grand_total: grandTotal,
+        discount_type_norm: discountTypeNorm,
+        discount_value_num: discountValueNum,
+        discount_amount_display: discountAmountDisplay,
+        show_discount_row: showDiscountRow,
         table_name: order.table_id ? (tableMap[order.table_id] || null) : null,
         assigned_staff_name: order.assigned_staff_id ? (staffMap[order.assigned_staff_id] || null) : null,
       });
@@ -268,16 +296,16 @@ export default function OrdersPage() {
                   <div style={styles.billTaxRow}><span>SGST ({order.sgst_rate.toFixed(2)}%):</span><span>₹{order.sgst_tax.toFixed(2)}</span></div>
                   <div style={styles.billTaxRow}><span>VAT ({order.vat_rate.toFixed(2)}%):</span><span>₹{order.vat_tax.toFixed(2)}</span></div>
                   <div style={styles.billTaxRow}><span>VAT Surcharge ({order.vat_surcharge_rate.toFixed(2)}% on VAT):</span><span>₹{order.vat_surcharge_tax.toFixed(2)}</span></div>
-                  {parseFloat(order.discount_amount ?? 0) > 0 && (
-                    <div style={styles.billTaxRow}>
+                  {order.show_discount_row && (
+                    <div style={styles.billDiscountRow}>
                       <span>
                         Discount
-                        {isPercentageDiscountType(order.discount_type) && Number(order.discount_value) > 0
-                          ? ` (${Number(order.discount_value)}% on bill)`
-                          : ""}
+                        {discountLabelSuffix(order.discount_type_norm, order.discount_value_num)}
                         :
                       </span>
-                      <span>−₹{parseFloat(order.discount_amount).toFixed(2)}</span>
+                      <span style={styles.billDiscountAmt}>
+                        −₹{order.discount_amount_display.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   {Math.abs(parseFloat(order.round_off_amount ?? 0)) >= 0.005 && (
@@ -310,7 +338,15 @@ export default function OrdersPage() {
                   </button>
                 </div>
               )}
-              <span style={styles.orderTotal}>Total: ₹{order.grand_total.toFixed(2)}</span>
+              <span style={styles.orderTotal}>
+                Total: ₹{order.grand_total.toFixed(2)}
+                {order.discount_amount_display > 0.004 && (
+                  <span style={styles.orderDiscountHint}>
+                    {" "}
+                    (−₹{order.discount_amount_display.toFixed(2)} discount)
+                  </span>
+                )}
+              </span>
             </div>
           </div>
         ))}
@@ -365,6 +401,14 @@ const styles = {
     gap: 6,
   },
   billTaxRow: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#666" },
+  billDiscountRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 13,
+    color: "#9d174d",
+    fontWeight: 600,
+  },
+  billDiscountAmt: { fontVariantNumeric: "tabular-nums" },
   billTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 700, marginTop: 2 },
   billSubtotalAmount: { color: "#333" },
   billTotalAmount: { color: "#e94560" },
@@ -408,4 +452,5 @@ const styles = {
     fontWeight: 600,
   },
   orderTotal: { fontWeight: 700, fontSize: 16, color: "#e94560" },
+  orderDiscountHint: { fontWeight: 600, fontSize: 12, color: "#9d174d" },
 };
