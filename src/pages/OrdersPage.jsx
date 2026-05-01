@@ -151,6 +151,7 @@ export default function OrdersPage() {
         show_discount_row: showDiscountRow,
         table_name: order.table_id ? (tableMap[order.table_id] || null) : null,
         assigned_staff_name: order.assigned_staff_id ? (staffMap[order.assigned_staff_id] || null) : null,
+        billed_by_display: order.billed_by_name || (order.user_id ? staffMap[order.user_id] : null) || null,
       });
     }
 
@@ -170,6 +171,7 @@ export default function OrdersPage() {
     async (orderId) => {
       await db.orders.update(orderId, {
         status: "completed",
+        user_id: user?.id || null,
         sync_status: SYNC_STATUS.PENDING,
         updated_at: new Date().toISOString(),
       });
@@ -184,7 +186,7 @@ export default function OrdersPage() {
 
       await loadOrders();
     },
-    [isOnline, loadOrders]
+    [isOnline, loadOrders, user?.id]
   );
 
   const handleDeleteOrder = useCallback(
@@ -269,6 +271,9 @@ export default function OrdersPage() {
               <div style={styles.customerInfo}>
                 {order.table_name && <span style={styles.tableTag}>Table: {order.table_name}</span>}
                 {order.assigned_staff_name && <span style={styles.staffTag}>Staff: {order.assigned_staff_name}</span>}
+                {(order.status === "completed" || order.billed_by_display) && (
+                  <span style={styles.billedByTag}>Billed by: {order.billed_by_display || "—"}</span>
+                )}
                 {order.customer_name}
                 {order.customer_phone && <span style={styles.phone}> - {order.customer_phone}</span>}
               </div>
@@ -381,6 +386,7 @@ const styles = {
   customerInfo: { fontSize: 13, color: "#555", marginBottom: 6 },
   tableTag: { background: "#1a1a2e", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, marginRight: 8 },
   staffTag: { background: "#6366f1", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, marginRight: 8 },
+  billedByTag: { background: "#0f766e", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, marginRight: 8 },
   phone: { color: "#888" },
   orderItems: { display: "flex", flexDirection: "column", gap: 2 },
   taxSectionTitle: {

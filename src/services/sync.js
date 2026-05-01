@@ -163,6 +163,7 @@ export const syncService = {
             round_off_amount: parseFloat(order.round_off_amount ?? 0),
             customer_name: order.customer_name,
             customer_phone: order.customer_phone,
+            billed_by_name: order.billed_by_name || null,
             version: order.version,
             sync_status: SYNC_STATUS.SYNCED,
             created_at: order.created_at,

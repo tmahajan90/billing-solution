@@ -199,7 +199,7 @@ export default function POSPage() {
     const dType = normalizeDiscountType(order.discount_type);
     setDiscountType(dType);
     setDiscountValueInput(dType === "none" || order.discount_value == null ? "" : String(order.discount_value));
-    setSelectedStaffId(user?.role === "staff" && user.id ? user.id : (order.assigned_staff_id || null));
+    setSelectedStaffId(order.assigned_staff_id || (user?.role === "staff" && user.id ? user.id : null));
 
     if (order.table_id) {
       setSelectedTableId(order.table_id);
@@ -337,7 +337,7 @@ export default function POSPage() {
 
       await db.orders.update(existingOrder.id, {
         table_id: selectedTableId || null,
-        assigned_staff_id: selectedTableId ? (user?.role === "staff" && user.id ? user.id : (selectedStaffId || null)) : null,
+        assigned_staff_id: user?.role === "staff" && user.id ? user.id : selectedStaffId || null,
         total: grandTotal,
         subtotal,
         gst_enabled: cgstEnabled || sgstEnabled,
@@ -372,7 +372,7 @@ export default function POSPage() {
       const order = {
         id: newOrderId,
         table_id: selectedTableId || null,
-        assigned_staff_id: selectedTableId ? (user?.role === "staff" && user.id ? user.id : (selectedStaffId || null)) : null,
+        assigned_staff_id: user?.role === "staff" && user.id ? user.id : selectedStaffId || null,
         status: "confirmed",
         sync_status: SYNC_STATUS.PENDING,
         total: grandTotal,
@@ -434,6 +434,7 @@ export default function POSPage() {
     if (!existingOrder) return;
     await db.orders.update(existingOrder.id, {
       status: "completed",
+      user_id: user?.id || null,
       sync_status: SYNC_STATUS.PENDING,
       updated_at: new Date().toISOString(),
     });
