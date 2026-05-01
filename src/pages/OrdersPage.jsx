@@ -23,7 +23,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [openOrdersCount, setOpenOrdersCount] = useState(0);
   const [filter, setFilter] = useState("all");
-  const { tenant } = useAuth();
+  const { tenant, user } = useAuth();
   const { isOnline, syncing, triggerSync, syncVersion } = useOffline();
   const navigate = useNavigate();
 
@@ -330,12 +330,16 @@ export default function OrdersPage() {
                   <button style={styles.editBtn} onClick={() => handleEditOrder(order.id)}>
                     Edit
                   </button>
-                  <button style={styles.closeBtn} onClick={() => handleCloseOrder(order.id)}>
-                    Close
-                  </button>
-                  <button style={styles.deleteBtn} onClick={() => handleDeleteOrder(order)}>
-                    Delete
-                  </button>
+                  {user?.role !== "staff" && (
+                    <>
+                      <button style={styles.closeBtn} onClick={() => handleCloseOrder(order.id)}>
+                        Close
+                      </button>
+                      <button style={styles.deleteBtn} onClick={() => handleDeleteOrder(order)}>
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
               <span style={styles.orderTotal}>

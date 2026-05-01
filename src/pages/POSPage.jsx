@@ -34,7 +34,7 @@ export default function POSPage() {
   const [discountType, setDiscountType] = useState("none");
   const [discountValueInput, setDiscountValueInput] = useState("");
   const { isOnline, syncVersion } = useOffline();
-  const { tenant } = useAuth();
+  const { user, tenant } = useAuth();
 
   const handleCustomerPhoneBlur = useCallback(async () => {
     const phone = customerPhone.trim();
@@ -86,8 +86,19 @@ export default function POSPage() {
     setDiscountType("none");
     setDiscountValueInput("");
     setCustomerDiscountApplied(false);
-    setSelectedStaffId(null);
+    if (user?.role === "staff" && user.id && selectedTableId) {
+      setSelectedStaffId(user.id);
+    } else {
+      setSelectedStaffId(null);
+    }
   }, [orderId]);
+
+  // Auto-assign staff user when they select a table on a new order
+  useEffect(() => {
+    if (user?.role === "staff" && user.id && selectedTableId && !selectedStaffId) {
+      setSelectedStaffId(user.id);
+    }
+  }, [selectedTableId, allStaff, user]);
 
   useEffect(() => {
     loadData();
@@ -188,7 +199,7 @@ export default function POSPage() {
     const dType = normalizeDiscountType(order.discount_type);
     setDiscountType(dType);
     setDiscountValueInput(dType === "none" || order.discount_value == null ? "" : String(order.discount_value));
-    setSelectedStaffId(order.assigned_staff_id || null);
+    setSelectedStaffId(user?.role === "staff" && user.id ? user.id : (order.assigned_staff_id || null));
 
     if (order.table_id) {
       setSelectedTableId(order.table_id);
@@ -494,6 +505,9 @@ export default function POSPage() {
                 setSelectedTableId(id);
                 const t = allTables.find((tbl) => tbl.id === id);
                 setTableName(t ? t.name : "");
+                if (id && user?.role === "staff" && user.id) {
+                  setSelectedStaffId(user.id);
+                }
               }}
             >
               <option value="">No Table</option>
@@ -505,7 +519,7 @@ export default function POSPage() {
               style={{ ...styles.selectTable, flex: 1, opacity: selectedTableId ? 1 : 0.5 }}
               value={selectedStaffId || ""}
               onChange={(e) => setSelectedStaffId(e.target.value || null)}
-              disabled={!selectedTableId}
+              disabled={!selectedTableId || user?.role === "staff"}
             >
               <option value="">Assign Staff *</option>
               {allStaff.map((s) => (
@@ -639,7 +653,7 @@ export default function POSPage() {
               {existingOrder ? "Update Order" : "Place Order"}
               {!isOnline && <span style={styles.offlineHint}> (Offline)</span>}
             </button>
-            {existingOrder && (
+            {existingOrder && user?.role !== "staff" && (
               <button type="button" style={styles.closeBtn} onClick={closeOrder}>
                 Close Order
               </button>

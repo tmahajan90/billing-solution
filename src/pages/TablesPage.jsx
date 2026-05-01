@@ -7,6 +7,7 @@ import useAutoRefresh from "../hooks/useAutoRefresh";
 export default function TablesPage() {
   const [tables, setTables] = useState([]);
   const [openOrders, setOpenOrders] = useState({});
+  const [staffMap, setStaffMap] = useState({});
   const { triggerSync, syncing, syncVersion } = useOffline();
   const navigate = useNavigate();
 
@@ -16,6 +17,11 @@ export default function TablesPage() {
       (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" })
     );
     setTables(sortedTables);
+
+    const staff = await db.staff.toArray();
+    const sMap = {};
+    for (const s of staff) sMap[s.id] = s.name;
+    setStaffMap(sMap);
 
     try {
       const ordersMap = {};
@@ -84,15 +90,15 @@ export default function TablesPage() {
             <div key={area}>
               <h3 style={styles.areaTitle}>{area}</h3>
               <div style={styles.grid}>
-                {tables
-                  .filter((t) => t.area === area)
-                  .map((table) => renderCard(table, statusConfig, openOrders, getTableStatus, handleTableClick))}
+                  {tables
+                    .filter((t) => t.area === area)
+                    .map((table) => renderCard(table, statusConfig, openOrders, staffMap, getTableStatus, handleTableClick))}
               </div>
             </div>
           ))
         : tables.length > 0 && (
             <div style={styles.grid}>
-              {tables.map((table) => renderCard(table, statusConfig, openOrders, getTableStatus, handleTableClick))}
+              {tables.map((table) => renderCard(table, statusConfig, openOrders, staffMap, getTableStatus, handleTableClick))}
             </div>
           )}
 
@@ -106,10 +112,11 @@ export default function TablesPage() {
   );
 }
 
-function renderCard(table, statusConfig, openOrders, getTableStatus, handleTableClick) {
+function renderCard(table, statusConfig, openOrders, staffMap, getTableStatus, handleTableClick) {
   const status = getTableStatus(table);
   const config = statusConfig[status];
   const order = openOrders[table.id];
+  const staffName = order?.assigned_staff_id ? staffMap[order.assigned_staff_id] : null;
 
   return (
     <div
@@ -128,6 +135,9 @@ function renderCard(table, statusConfig, openOrders, getTableStatus, handleTable
         <div style={styles.orderInfo}>
           ₹{parseFloat(order.total).toFixed(0)}
         </div>
+      )}
+      {staffName && (
+        <div style={styles.staffInfo}>{staffName}</div>
       )}
     </div>
   );
@@ -157,5 +167,6 @@ const styles = {
   tableCapacity: { fontSize: 12 },
   tableStatus: { padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 600 },
   orderInfo: { fontSize: 14, fontWeight: 700, marginTop: 4, color: "#333" },
+  staffInfo: { fontSize: 11, color: "#666", fontWeight: 500, fontStyle: "italic", marginTop: 2 },
   empty: { textAlign: "center", color: "#999", padding: 60 },
 };
