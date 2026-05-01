@@ -1,4 +1,5 @@
-const DEFAULT_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const currentOrigin = window.location.origin;
+const DEFAULT_API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:3000" : currentOrigin);
 
 class ApiClient {
   constructor() {

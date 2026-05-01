@@ -8,7 +8,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem("api_url") || import.meta.env.VITE_API_URL || "http://localhost:3000");
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem("api_url") || import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:3000" : window.location.origin));
   const [form, setForm] = useState({
     name: "",
     email: "",
