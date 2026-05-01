@@ -1,13 +1,19 @@
 # Builds installable POS desktop artifacts for macOS (.dmg) and Windows (.exe NSIS).
-# Run manually from Actions, or push a git tag matching v* (e.g. v1.3.0).
-# On tag pushes, installers are also attached to the GitHub Release for that tag.
+# Runs on every push to main (artifacts only), on version tags (also uploads to GitHub Release),
+# or manually from Actions.
 name: Electron release build
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+
+concurrency:
+  group: electron-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # Required so the release job can upload DMG/EXE to the GitHub Release (same repo).
 permissions:

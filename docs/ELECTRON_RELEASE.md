@@ -14,19 +14,21 @@ npm run electron:start  # dev: Vite on :5173 + Electron window
 ## Build for the machine you are on
 
 ```bash
-npm run electron:build       # current OS (macOS → .dmg, Windows → Setup .exe)
-npm run electron:build:mac     # force macOS universal DMG (run on a Mac)
-npm run electron:build:win     # force Windows NSIS installer (run on Windows)
+npm run electron:build       # macOS: universal .dmg + NSIS .exe in one go; Windows/Linux: installer for that OS only
+npm run electron:build:all   # same as electron:build
+npm run electron:build:mac   # macOS universal DMG only (run on a Mac)
+npm run electron:build:win   # Windows NSIS installer only (run on Windows)
 ```
 
-Cross-building **Windows from macOS** (or the reverse) is not configured here; use GitHub Actions below.
+On **macOS**, the Windows NSIS step may require [Wine](https://www.winehq.org/) if electron-builder reports it is missing. **GitHub Actions** still uses separate macOS and Windows runners so both artifacts are built without Wine.
 
 ## macOS + Windows artifacts (CI)
 
 The workflow [`.github/workflows/electron-release.yml`](../.github/workflows/electron-release.yml) runs on:
 
+- **Push to `main`:** builds DMG and EXE every time; artifacts only (no GitHub Release upload).
 - **Manual run:** GitHub → Actions → *Electron release build* → Run workflow  
-- **Tag push:** push a tag like `v1.3.1` on the default branch
+- **Tag push:** push a tag like `v1.3.1` — same builds, plus installers attached to that GitHub Release
 
 Two jobs run in parallel:
 
