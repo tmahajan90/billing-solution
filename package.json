@@ -1,7 +1,7 @@
 {
   "name": "billing-solution",
   "private": false,
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Billing Solution - Offline-first Point of Sale Desktop App",
   "main": "electron/main.cjs",
   "type": "module",
@@ -11,10 +11,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:start": "electron .",
-    "electron:build": "vite build && electron-builder",
-    "electron:build:mac": "vite build && electron-builder --mac",
-    "electron:build:win": "vite build && electron-builder --win",
-    "electron:build:linux": "vite build && electron-builder --linux"
+    "electron:build": "vite build && electron-builder --publish never",
+    "electron:build:mac": "vite build && electron-builder --mac --publish never",
+    "electron:build:win": "vite build && electron-builder --win --publish never",
+    "electron:build:linux": "vite build && electron-builder --linux --publish never",
+    "verify": "npm run build",
+    "verify:full": "npm run lint && npm run build"
   },
   "build": {
     "appId": "com.billing.solution",
@@ -73,7 +75,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
-    "vite": "^8.0.10",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite": "^8.0.10"
   }
 }

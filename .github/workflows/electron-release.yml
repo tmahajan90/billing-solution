@@ -1,0 +1,60 @@
+# Builds installable POS desktop artifacts for macOS (.dmg) and Windows (.exe NSIS).
+# Run manually from Actions, or push a git tag matching v* (e.g. v1.3.0).
+name: Electron release build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    name: macOS (DMG)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install, verify web build, package app
+        run: |
+          npm ci
+          npm run verify
+          npm run electron:build:mac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: billing-solution-macos
+          path: release/*.*
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows (NSIS)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install, verify web build, package app
+        shell: bash
+        run: |
+          npm ci
+          npm run verify
+          npm run electron:build:win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: billing-solution-windows
+          path: release/*.*
+          if-no-files-found: error

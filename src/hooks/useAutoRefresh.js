@@ -4,6 +4,8 @@ import { useOffline } from "../context/OfflineContext";
 export default function useAutoRefresh(callback, intervalMs = 15000) {
   const { isOnline } = useOffline();
   const callbackRef = useRef(callback);
+  // Keep latest callback without tearing down the interval on every parent render.
+  // eslint-disable-next-line react-hooks/refs -- intentional ref update during render
   callbackRef.current = callback;
 
   useEffect(() => {
