@@ -95,12 +95,14 @@ export default function KitchenPage() {
     loadKitchen();
   };
 
+  const activeOrders = orders.filter((o) => (o.kitchen_status ?? 0) !== KITCHEN_STATUS.served);
+
   const filtered = filter === "all"
-    ? orders
+    ? activeOrders
     : orders.filter((o) => (o.kitchen_status ?? 0) === KITCHEN_STATUS[filter]);
 
   const counts = {
-    all: orders.length,
+    all: activeOrders.length,
     pending: orders.filter((o) => (o.kitchen_status ?? 0) === 0).length,
     cooking: orders.filter((o) => (o.kitchen_status ?? 0) === 1).length,
     ready: orders.filter((o) => (o.kitchen_status ?? 0) === 2).length,
