@@ -207,10 +207,7 @@ export default function KitchenPage() {
                   {nextLabel[ks]}
                 </button>
               )}
-              {ks === KITCHEN_STATUS.ready && (
-                <div style={styles.readyLabel}>Ready for pickup</div>
-              )}
-              {ks === KITCHEN_STATUS.prepared && (
+              {!hasNext && ks === KITCHEN_STATUS.prepared && (
                 <div style={styles.preparedLabel}>Prepared &amp; Delivered</div>
               )}
             </div>
