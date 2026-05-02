@@ -179,6 +179,7 @@ export const syncService = {
                 id: item.id || crypto.randomUUID(),
                 order_id: order.id,
                 product_id: item.product_id,
+                name: item.product_name || item.name || null,
                 quantity: item.quantity,
                 unit_price: parseFloat(item.unit_price),
                 total: parseFloat(item.total),
