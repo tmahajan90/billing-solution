@@ -97,14 +97,14 @@ export default function KitchenPage() {
 
   const filtered = filter === "all"
     ? orders
-    : orders.filter((o) => o.kitchen_status === KITCHEN_STATUS[filter]);
+    : orders.filter((o) => (o.kitchen_status ?? 0) === KITCHEN_STATUS[filter]);
 
   const counts = {
     all: orders.length,
-    pending: orders.filter((o) => o.kitchen_status === 0).length,
-    preparing: orders.filter((o) => o.kitchen_status === 1).length,
-    ready: orders.filter((o) => o.kitchen_status === 2).length,
-    prepared: orders.filter((o) => o.kitchen_status === 3).length,
+    pending: orders.filter((o) => (o.kitchen_status ?? 0) === 0).length,
+    preparing: orders.filter((o) => (o.kitchen_status ?? 0) === 1).length,
+    ready: orders.filter((o) => (o.kitchen_status ?? 0) === 2).length,
+    prepared: orders.filter((o) => (o.kitchen_status ?? 0) === 3).length,
   };
 
   const totalItems = filtered.reduce((sum, o) => sum + o.items.length, 0);
@@ -157,8 +157,9 @@ export default function KitchenPage() {
         {filtered.map((order) => {
           const age = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000);
           const urgent = age >= 15;
-          const cfg = statusConfig[order.kitchen_status];
-          const hasNext = nextStatus[order.kitchen_status] !== undefined;
+          const ks = order.kitchen_status ?? 0;
+          const cfg = statusConfig[ks] || statusConfig[0];
+          const hasNext = nextStatus[ks] !== undefined;
           return (
             <div key={order.id} style={{ ...styles.ticket, background: cfg.bg, borderLeftColor: cfg.border }}>
               <div style={styles.ticketHeader}>
@@ -201,15 +202,15 @@ export default function KitchenPage() {
               {hasNext && (
                 <button
                   style={styles.actionBtn}
-                  onClick={() => updateKitchenStatus(order.id, nextStatus[order.kitchen_status])}
+                  onClick={() => updateKitchenStatus(order.id, nextStatus[ks])}
                 >
-                  {nextLabel[order.kitchen_status]}
+                  {nextLabel[ks]}
                 </button>
               )}
-              {order.kitchen_status === KITCHEN_STATUS.ready && (
+              {ks === KITCHEN_STATUS.ready && (
                 <div style={styles.readyLabel}>Ready for pickup</div>
               )}
-              {order.kitchen_status === KITCHEN_STATUS.prepared && (
+              {ks === KITCHEN_STATUS.prepared && (
                 <div style={styles.preparedLabel}>Prepared &amp; Delivered</div>
               )}
             </div>
