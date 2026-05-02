@@ -27,6 +27,10 @@ export default function OrdersPage() {
   const { isOnline, syncing, triggerSync, syncVersion } = useOffline();
   const navigate = useNavigate();
 
+  const isFrontline = user?.role === "staff" || user?.role === "chef" || user?.role === "kitchen";
+  const canClose = user?.role === "cashier" || user?.role === "manager" || user?.role === "admin";
+  const canDelete = user?.role === "manager" || user?.role === "admin";
+
   useEffect(() => {
     loadOrders();
   }, [filter, syncVersion]);
@@ -335,15 +339,15 @@ export default function OrdersPage() {
                   <button style={styles.editBtn} onClick={() => handleEditOrder(order.id)}>
                     Edit
                   </button>
-                  {user?.role !== "staff" && (
-                    <>
-                      <button style={styles.closeBtn} onClick={() => handleCloseOrder(order.id)}>
-                        Close
-                      </button>
-                      <button style={styles.deleteBtn} onClick={() => handleDeleteOrder(order)}>
-                        Delete
-                      </button>
-                    </>
+                  {canClose && (
+                    <button style={styles.closeBtn} onClick={() => handleCloseOrder(order.id)}>
+                      Close
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button style={styles.deleteBtn} onClick={() => handleDeleteOrder(order)}>
+                      Delete
+                    </button>
                   )}
                 </div>
               )}

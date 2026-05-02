@@ -36,6 +36,10 @@ export default function POSPage() {
   const { isOnline, syncVersion } = useOffline();
   const { user, tenant } = useAuth();
 
+  const isFrontline = user?.role === "staff" || user?.role === "chef" || user?.role === "kitchen";
+  const canClose = user?.role === "cashier" || user?.role === "manager" || user?.role === "admin";
+  const canDelete = user?.role === "manager" || user?.role === "admin";
+
   const handleCustomerPhoneBlur = useCallback(async () => {
     const phone = customerPhone.trim();
     if (!phone || phone.length < 4) return;
@@ -86,7 +90,7 @@ export default function POSPage() {
     setDiscountType("none");
     setDiscountValueInput("");
     setCustomerDiscountApplied(false);
-    if (user?.role === "staff" && user.id && selectedTableId) {
+    if (isFrontline && user.id && selectedTableId) {
       setSelectedStaffId(user.id);
     } else {
       setSelectedStaffId(null);
@@ -95,7 +99,7 @@ export default function POSPage() {
 
   // Auto-assign staff user when they select a table on a new order
   useEffect(() => {
-    if (user?.role === "staff" && user.id && selectedTableId && !selectedStaffId) {
+    if (isFrontline && user.id && selectedTableId && !selectedStaffId) {
       setSelectedStaffId(user.id);
     }
   }, [selectedTableId, allStaff, user]);
@@ -199,7 +203,7 @@ export default function POSPage() {
     const dType = normalizeDiscountType(order.discount_type);
     setDiscountType(dType);
     setDiscountValueInput(dType === "none" || order.discount_value == null ? "" : String(order.discount_value));
-    setSelectedStaffId(order.assigned_staff_id || (user?.role === "staff" && user.id ? user.id : null));
+    setSelectedStaffId(order.assigned_staff_id || (isFrontline && user.id ? user.id : null));
 
     if (order.table_id) {
       setSelectedTableId(order.table_id);
@@ -337,7 +341,7 @@ export default function POSPage() {
 
       await db.orders.update(existingOrder.id, {
         table_id: selectedTableId || null,
-        assigned_staff_id: user?.role === "staff" && user.id ? user.id : selectedStaffId || null,
+        assigned_staff_id: isFrontline && user.id ? user.id : selectedStaffId || null,
         total: grandTotal,
         subtotal,
         gst_enabled: cgstEnabled || sgstEnabled,
@@ -372,7 +376,7 @@ export default function POSPage() {
       const order = {
         id: newOrderId,
         table_id: selectedTableId || null,
-        assigned_staff_id: user?.role === "staff" && user.id ? user.id : selectedStaffId || null,
+        assigned_staff_id: isFrontline && user.id ? user.id : selectedStaffId || null,
         status: "confirmed",
         sync_status: SYNC_STATUS.PENDING,
         total: grandTotal,
@@ -480,13 +484,17 @@ export default function POSPage() {
               </div>
             ) : null
           ))}
-          {selectedCategory !== "All" && filtered.map((product) => (
-            <div key={product.id} style={styles.productCard} onClick={() => addToCart(product)}>
-              <div style={styles.productName}>{product.name}</div>
-              <div style={styles.productCategory}>{normalizeCategory(product.category)}</div>
-              <div style={styles.productPrice}>₹{parseFloat(product.price).toFixed(2)}</div>
+          {selectedCategory !== "All" && filtered.length > 0 && (
+            <div style={styles.categorySectionGrid}>
+              {filtered.map((product) => (
+                <div key={product.id} style={styles.productCard} onClick={() => addToCart(product)}>
+                  <div style={styles.productName}>{product.name}</div>
+                  <div style={styles.productCategory}>{normalizeCategory(product.category)}</div>
+                  <div style={styles.productPrice}>₹{parseFloat(product.price).toFixed(2)}</div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
           {filtered.length === 0 && <div style={styles.empty}>No products available. Pull to sync from server.</div>}
         </div>
       </div>
@@ -506,7 +514,7 @@ export default function POSPage() {
                 setSelectedTableId(id);
                 const t = allTables.find((tbl) => tbl.id === id);
                 setTableName(t ? t.name : "");
-                if (id && user?.role === "staff" && user.id) {
+                if (id && isFrontline && user.id) {
                   setSelectedStaffId(user.id);
                 }
               }}
@@ -520,7 +528,7 @@ export default function POSPage() {
               style={{ ...styles.selectTable, flex: 1, opacity: selectedTableId ? 1 : 0.5 }}
               value={selectedStaffId || ""}
               onChange={(e) => setSelectedStaffId(e.target.value || null)}
-              disabled={!selectedTableId || user?.role === "staff"}
+              disabled={!selectedTableId || isFrontline}
             >
               <option value="">Assign Staff *</option>
               {allStaff.map((s) => (
@@ -654,7 +662,7 @@ export default function POSPage() {
               {existingOrder ? "Update Order" : "Place Order"}
               {!isOnline && <span style={styles.offlineHint}> (Offline)</span>}
             </button>
-            {existingOrder && user?.role !== "staff" && (
+            {existingOrder && canClose && (
               <button type="button" style={styles.closeBtn} onClick={closeOrder}>
                 Close Order
               </button>
