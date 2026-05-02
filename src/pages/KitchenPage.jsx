@@ -4,25 +4,25 @@ import { useOffline } from "../context/OfflineContext";
 import { useAuth } from "../context/AuthContext";
 import useAutoRefresh from "../hooks/useAutoRefresh";
 
-const KITCHEN_STATUS = { pending: 0, preparing: 1, ready: 2, prepared: 3 };
+const KITCHEN_STATUS = { pending: 0, cooking: 1, ready: 2, served: 3 };
 
 const statusConfig = {
   [KITCHEN_STATUS.pending]: { label: "Pending", bg: "#1e293b", border: "#f59e0b", badgeBg: "#78350f", badgeColor: "#fbbf24" },
-  [KITCHEN_STATUS.preparing]: { label: "Preparing", bg: "#1e293b", border: "#3b82f6", badgeBg: "#1e3a5f", badgeColor: "#60a5fa" },
+  [KITCHEN_STATUS.cooking]: { label: "Cooking", bg: "#1e293b", border: "#3b82f6", badgeBg: "#1e3a5f", badgeColor: "#60a5fa" },
   [KITCHEN_STATUS.ready]: { label: "Ready", bg: "#1e293b", border: "#22c55e", badgeBg: "#14532d", badgeColor: "#4ade80" },
-  [KITCHEN_STATUS.prepared]: { label: "Prepared", bg: "#1e293b", border: "#a855f7", badgeBg: "#3b0764", badgeColor: "#c084fc" },
+  [KITCHEN_STATUS.served]: { label: "Served", bg: "#1e293b", border: "#a855f7", badgeBg: "#3b0764", badgeColor: "#c084fc" },
 };
 
 const nextStatus = {
-  [KITCHEN_STATUS.pending]: KITCHEN_STATUS.preparing,
-  [KITCHEN_STATUS.preparing]: KITCHEN_STATUS.ready,
-  [KITCHEN_STATUS.ready]: KITCHEN_STATUS.prepared,
+  [KITCHEN_STATUS.pending]: KITCHEN_STATUS.cooking,
+  [KITCHEN_STATUS.cooking]: KITCHEN_STATUS.ready,
+  [KITCHEN_STATUS.ready]: KITCHEN_STATUS.served,
 };
 
 const nextLabel = {
-  [KITCHEN_STATUS.pending]: "Start Preparing",
-  [KITCHEN_STATUS.preparing]: "Mark Ready",
-  [KITCHEN_STATUS.ready]: "Mark Prepared",
+  [KITCHEN_STATUS.pending]: "Start Cooking",
+  [KITCHEN_STATUS.cooking]: "Mark Ready",
+  [KITCHEN_STATUS.ready]: "Mark Served",
 };
 
 export default function KitchenPage() {
@@ -102,9 +102,9 @@ export default function KitchenPage() {
   const counts = {
     all: orders.length,
     pending: orders.filter((o) => (o.kitchen_status ?? 0) === 0).length,
-    preparing: orders.filter((o) => (o.kitchen_status ?? 0) === 1).length,
+    cooking: orders.filter((o) => (o.kitchen_status ?? 0) === 1).length,
     ready: orders.filter((o) => (o.kitchen_status ?? 0) === 2).length,
-    prepared: orders.filter((o) => (o.kitchen_status ?? 0) === 3).length,
+    served: orders.filter((o) => (o.kitchen_status ?? 0) === 3).length,
   };
 
   const totalItems = filtered.reduce((sum, o) => sum + o.items.length, 0);
@@ -128,7 +128,7 @@ export default function KitchenPage() {
       </div>
 
       <div style={styles.filterBar}>
-        {["all", "pending", "preparing", "ready", "prepared"].map((f) => {
+        {["all", "pending", "cooking", "ready", "served"].map((f) => {
           const cfg = f === "all"
             ? { label: "All", badgeBg: "#334155", badgeColor: "#94a3b8" }
             : statusConfig[KITCHEN_STATUS[f]];
@@ -207,8 +207,8 @@ export default function KitchenPage() {
                   {nextLabel[ks]}
                 </button>
               )}
-              {!hasNext && ks === KITCHEN_STATUS.prepared && (
-                <div style={styles.preparedLabel}>Prepared &amp; Delivered</div>
+              {!hasNext && ks === KITCHEN_STATUS.served && (
+                <div style={styles.servedLabel}>Served</div>
               )}
             </div>
           );
@@ -276,7 +276,7 @@ const styles = {
     textAlign: "center",
     marginTop: 2,
   },
-  preparedLabel: {
+  servedLabel: {
     padding: "8px 0",
     borderRadius: 8,
     background: "#3b0764",
