@@ -47,6 +47,7 @@ export default function Layout() {
           <NavLink to="/" end style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}>Tables</NavLink>
           <NavLink to="/pos/new" style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}>POS</NavLink>
           <NavLink to="/orders" style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}>Orders</NavLink>
+          <NavLink to="/kitchen" style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}>Kitchen</NavLink>
         </div>
         <div style={styles.navRight}>
           <span style={{ ...styles.statusDot, background: isOnline ? "#4caf50" : "#f44336" }} />

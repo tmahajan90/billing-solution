@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import TablesPage from "./pages/TablesPage";
 import POSPage from "./pages/POSPage";
 import OrdersPage from "./pages/OrdersPage";
+import KitchenPage from "./pages/KitchenPage";
 
 function ProtectedRoute({ children }) {
   const { isLoggedIn } = useAuth();
@@ -30,6 +31,7 @@ function App() {
               <Route path="pos/new" element={<POSPage />} />
               <Route path="pos/:orderId" element={<POSPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="kitchen" element={<KitchenPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
