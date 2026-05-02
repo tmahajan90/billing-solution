@@ -28,11 +28,24 @@ db.version(4).stores({
 
 db.version(5).stores({
   products: "id, name, category, tax_type, price, active, updated_at",
-  orders: "id, table_id, status, sync_status, updated_at, created_at",
+  orders: "id, table_id, status, kitchen_status, sync_status, updated_at, created_at",
   order_items: "id, order_id, product_id",
   pos_tables: "id, name, capacity, area",
   staff: "id, name, role",
   sync_meta: "key",
+});
+
+db.version(6).stores({
+  products: "id, name, category, tax_type, price, active, updated_at",
+  orders: "id, table_id, status, kitchen_status, sync_status, updated_at, created_at",
+  order_items: "id, order_id, product_id",
+  pos_tables: "id, name, capacity, area",
+  staff: "id, name, role",
+  sync_meta: "key",
+}).upgrade((tx) => {
+  return tx.table("orders").toCollection().modify((order) => {
+    order.kitchen_status = order.kitchen_status ?? 0;
+  });
 });
 
 export default db;

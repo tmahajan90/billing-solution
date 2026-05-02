@@ -607,8 +607,9 @@ export default function POSPage() {
               </div>
               <div style={styles.discountFieldsRow}>
                 <select
-                  style={styles.selectDiscount}
+                  style={{ ...styles.selectDiscount, ...(isFrontline ? { opacity: 0.5, cursor: "not-allowed" } : {}) }}
                   value={discountType}
+                  disabled={isFrontline}
                   onChange={(e) => {
                     const v = e.target.value;
                     setDiscountType(v);
@@ -621,7 +622,7 @@ export default function POSPage() {
                 </select>
                 {discountType !== "none" && (
                   <input
-                    style={styles.inputDiscountInline}
+                    style={{ ...styles.inputDiscountInline, ...(isFrontline ? { opacity: 0.5, cursor: "not-allowed" } : {}) }}
                     type="number"
                     min="0"
                     step="0.01"
@@ -629,6 +630,7 @@ export default function POSPage() {
                     inputMode="decimal"
                     placeholder={discountType === "percentage" ? "%" : "₹"}
                     value={discountValueInput}
+                    disabled={isFrontline}
                     onChange={(e) => setDiscountValueInput(e.target.value)}
                   />
                 )}
