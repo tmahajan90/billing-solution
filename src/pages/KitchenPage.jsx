@@ -35,10 +35,8 @@ export default function KitchenPage() {
   const { user } = useAuth();
 
   const loadKitchen = useCallback(async () => {
-    const allOrders = await db.orders
-      .where("status")
-      .anyOf(["draft", "confirmed"])
-      .toArray();
+    const allOrders = await db.orders.toArray();
+    const openOrders = allOrders.filter((o) => o.status === "draft" || o.status === "confirmed");
 
     const items = await db.order_items.toArray();
     const itemsByOrder = {};
