@@ -167,7 +167,7 @@ export default function KitchenPage() {
           return (
             <div key={order.id} style={{ ...styles.ticket, background: cfg.bg, borderLeftColor: cfg.border }}>
               <div style={styles.ticketHeader}>
-                <div>
+                <div style={styles.ticketHeaderLeft}>
                   <span style={styles.ticketId}>#{order.id.slice(0, 8).toUpperCase()}</span>
                   {order.table_id && tableMap[order.table_id] && (
                     <span style={styles.tableBadge}>{tableMap[order.table_id]}</span>
@@ -250,10 +250,11 @@ const styles = {
     flexDirection: "column",
     gap: 10,
   },
-  ticketHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  ticketHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 },
+  ticketHeaderLeft: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, minWidth: 0 },
   ticketId: { color: "#f1f5f9", fontWeight: 700, fontSize: 15, fontFamily: "monospace" },
   tableBadge: { marginLeft: 8, background: "#334155", color: "#f1f5f9", padding: "2px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600 },
-  ticketMeta: { display: "flex", alignItems: "center", gap: 6 },
+  ticketMeta: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
   ageBadge: { padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700 },
   statusBadge: { padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase" },
   staffLine: { fontSize: 12, color: "#a5b4fc", fontWeight: 500 },
