@@ -34,6 +34,8 @@ export default function KitchenPage() {
   const { isOnline, triggerSync, syncing } = useOffline();
   const { user } = useAuth();
 
+  const canUpdateKitchenStatus = user?.role !== "staff";
+
   const loadKitchen = useCallback(async () => {
     const allOrders = await db.orders.toArray();
     const openOrders = allOrders.filter((o) => o.status === "draft" || o.status === "confirmed");
@@ -170,6 +172,7 @@ export default function KitchenPage() {
                   {order.table_id && tableMap[order.table_id] && (
                     <span style={styles.tableBadge}>{tableMap[order.table_id]}</span>
                   )}
+                  <span style={styles.orderStatusBadge}>{order.status || "Unknown"}</span>
                 </div>
                 <div style={styles.ticketMeta}>
                   <span style={{ ...styles.ageBadge, background: urgent ? "#7f1d1d" : "#1e3a5f", color: urgent ? "#fca5a5" : "#93c5fd" }}>
@@ -201,11 +204,16 @@ export default function KitchenPage() {
                 </span>
               </div>
 
-              {hasNext && (
+              {hasNext && canUpdateKitchenStatus && (
                 <button
                   style={styles.actionBtn}
                   onClick={() => updateKitchenStatus(order.id, nextStatus[ks])}
                 >
+                  {nextLabel[ks]}
+                </button>
+              )}
+              {hasNext && !canUpdateKitchenStatus && (
+                <button style={styles.disabledActionBtn} disabled>
                   {nextLabel[ks]}
                 </button>
               )}
@@ -268,6 +276,16 @@ const styles = {
     textAlign: "center",
     marginTop: 2,
   },
+  orderStatusBadge: {
+    marginLeft: 8,
+    padding: "2px 8px",
+    borderRadius: 8,
+    background: "#334155",
+    color: "#e2e8f0",
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "capitalize",
+  },
   readyLabel: {
     padding: "8px 0",
     borderRadius: 8,
@@ -277,6 +295,19 @@ const styles = {
     fontSize: 13,
     textAlign: "center",
     marginTop: 2,
+  },
+  disabledActionBtn: {
+    padding: "8px 0",
+    borderRadius: 8,
+    border: "none",
+    background: "#475569",
+    color: "#cbd5e1",
+    fontWeight: 700,
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 2,
+    cursor: "not-allowed",
+    opacity: 0.65,
   },
   servedLabel: {
     padding: "8px 0",
